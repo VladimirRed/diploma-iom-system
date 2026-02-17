@@ -1,25 +1,24 @@
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, declarative_base
-from config.settings import Config
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
 
-# Создаем движок
-# connect_args={"check_same_thread": False} нужно только для SQLite + Streamlit
+SQLALCHEMY_DATABASE_URL = "sqlite:///./app.db"
+
+# --- ИСПРАВЛЕНИЕ ДЛЯ STREAMLIT CLOUD ---
+# Добавлены connect_args для решения проблемы блокировки базы в облаке
 engine = create_engine(
-    Config.DATABASE_URL, 
-    connect_args={"check_same_thread": False} if "sqlite" in Config.DATABASE_URL else {}
+    SQLALCHEMY_DATABASE_URL, 
+    connect_args={
+        "check_same_thread": False, # Отключаем проверку потоков
+        "timeout": 15               # Ждем 15 секунд, если база занята
+    }
 )
 
-# Фабрика сессий
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-# Базовый класс для моделей
 Base = declarative_base()
 
 def get_db():
-    """
-    Генератор сессии базы данных.
-    Используется для безопасного получения и закрытия сессии.
-    """
     db = SessionLocal()
     try:
         yield db
